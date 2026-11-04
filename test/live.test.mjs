@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { s3, presignGet } from "../public/s3.js";
+import { s3, presignGet } from "../docs/s3.js";
 
 function parseRclone(text) {
   const cfg = {};

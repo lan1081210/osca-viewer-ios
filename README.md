@@ -40,7 +40,7 @@ OSCA 云存储（S3 兼容）的手机端浏览器：连接任意 S3 endpoint，
 ## 本地开发与验证
 
 ```bash
-cd public && python3 -m http.server 8080     # 打开 http://localhost:8080
+cd docs && python3 -m http.server 8080     # 打开 http://localhost:8080
 node test/live.test.mjs                       # 用 rclone.conf 里的凭据跑一次真实读写
 ```
 
@@ -57,7 +57,7 @@ node test/live.test.mjs                       # 用 rclone.conf 里的凭据跑�
 ## 目录
 
 ```
-public/            # 静态站点（GitHub Pages 发布这个目录）
+docs/              # 静态站点（GitHub Pages 发布这个目录）
   index.html       # 界面与交互
   s3.js            # SigV4 签名 + S3 调用（页面与测试共用）
   sw.js            # 离线外壳缓存
