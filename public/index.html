@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>OSCA Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OSCA">
+<meta name="theme-color" content="#0b0f14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#141a22; --panel-2:#1b232d; --line:#26313d;
+    --fg:#e8eef6; --muted:#8fa1b3; --accent:#4da3ff; --danger:#ff5c6c; --ok:#3ddc97;
+    --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif;
+    overscroll-behavior-y:contain}
+  body{display:flex;flex-direction:column}
+  header{position:sticky;top:0;z-index:20;padding:calc(8px + var(--safe-top)) 12px 8px;
+    background:rgba(11,15,20,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .bar{display:flex;align-items:center;gap:8px}
+  .bar h1{font-size:16px;margin:0;flex:1;font-weight:600;letter-spacing:.2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .icon-btn{width:34px;height:34px;display:grid;place-items:center;border:none;border-radius:10px;
+    background:var(--panel);color:var(--fg);font-size:16px}
+  .icon-btn:active{background:var(--panel-2)}
+  .crumbs{display:flex;gap:6px;align-items:center;margin-top:8px;overflow-x:auto;
+    scrollbar-width:none;font-size:13px;color:var(--muted);white-space:nowrap}
+  .crumbs::-webkit-scrollbar{display:none}
+  .crumbs button{background:none;border:none;color:var(--muted);font-size:13px;padding:2px 4px}
+  .crumbs button:last-child{color:var(--fg)}
+  .search{margin-top:8px;display:flex;gap:8px}
+  .search input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:9px 12px;color:var(--fg);font-size:14px}
+  .search input::placeholder{color:#5d6b7a}
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px calc(90px + var(--safe-bottom))}
+  .row{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:12px;background:var(--panel);
+    margin-bottom:8px;border:1px solid transparent}
+  .row:active{border-color:var(--accent)}
+  .row .thumb{width:38px;height:38px;border-radius:8px;background:var(--panel-2);display:grid;
+    place-items:center;font-size:17px;flex:none;overflow:hidden}
+  .row .thumb img{width:100%;height:100%;object-fit:cover}
+  .row .meta{flex:1;min-width:0}
+  .row .name{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .sub{font-size:12px;color:var(--muted);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .chev{color:#4a5765;font-size:16px}
+  .empty{color:var(--muted);text-align:center;padding:40px 20px;font-size:14px}
+  .fab{position:fixed;right:16px;bottom:calc(20px + var(--safe-bottom));width:54px;height:54px;
+    border-radius:27px;background:var(--accent);border:none;color:#04121f;font-size:24px;
+    box-shadow:0 10px 24px rgba(77,163,255,.35);display:grid;place-items:center;z-index:25}
+  .fab:active{transform:scale(.95)}
+  .sheet-wrap{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:none;
+    align-items:flex-end;justify-content:center}
+  .sheet-wrap.on{display:flex}
+  .sheet{width:100%;max-width:560px;background:var(--panel);border-radius:18px 18px 0 0;
+    padding:16px 16px calc(16px + var(--safe-bottom));max-height:88vh;overflow-y:auto}
+  .sheet h2{margin:0 0 12px;font-size:15px}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .field input,.field select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px;color:var(--fg);font-size:14px}
+  .btn{width:100%;padding:13px;border-radius:12px;border:none;font-size:15px;font-weight:600;margin-top:8px}
+  .btn.primary{background:var(--accent);color:#04121f}
+  .btn.ghost{background:var(--panel-2);color:var(--fg)}
+  .btn.danger{background:rgba(255,92,108,.14);color:var(--danger)}
+  .actions{display:flex;flex-direction:column;gap:8px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + var(--safe-bottom));
+    background:#1f2a36;color:var(--fg);padding:10px 16px;border-radius:12px;font-size:13px;z-index:60;
+    opacity:0;transition:opacity .2s;pointer-events:none;max-width:86vw;text-align:center}
+  .toast.on{opacity:1}
+  .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;
+    border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .viewer{position:fixed;inset:0;background:#000;z-index:50;display:none;flex-direction:column}
+  .viewer.on{display:flex}
+  .viewer .vbar{display:flex;gap:8px;align-items:center;padding:calc(8px + var(--safe-top)) 12px 8px;
+    background:rgba(0,0,0,.7)}
+  .viewer .vbody{flex:1;overflow:auto;display:grid;place-items:center;padding:8px}
+  .viewer img,.viewer video{max-width:100%;max-height:100%;object-fit:contain}
+  .viewer pre{color:#cfd8e3;font-size:12px;white-space:pre-wrap;word-break:break-all;padding:12px;
+    max-width:100%;margin:0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <button class="icon-btn" id="btnConnect" title="连接设置">⚙︎</button>
+    <h1 id="title">OSCA Viewer</h1>
+    <button class="icon-btn" id="btnRefresh" title="刷新">⟳</button>
+  </div>
+  <div class="crumbs" id="crumbs"></div>
+  <div class="search" id="searchWrap" style="display:none">
+    <input id="search" placeholder="在当前目录中筛选…" autocapitalize="off" autocomplete="off">
+  </div>
+</header>
+
+<main id="list"><div class="empty">先点左上角齿轮，填入连接信息</div></main>
+
+<button class="fab" id="btnUpload" style="display:none" title="上传">＋</button>
+<input type="file" id="filePicker" multiple style="display:none">
+
+<!-- 连接设置 -->
+<div class="sheet-wrap" id="connectSheet">
+  <div class="sheet">
+    <h2>连接</h2>
+    <div class="field"><label>Endpoint</label><input id="fEndpoint" placeholder="https://fgws3-ocloud.ihep.ac.cn" autocapitalize="off" autocorrect="off"></div>
+    <div class="field"><label>Bucket</label><input id="fBucket" placeholder="22134-lan1081210" autocapitalize="off" autocorrect="off"></div>
+    <div class="field"><label>Access Key</label><input id="fAK" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field"><label>Secret Key</label><input id="fSK" type="password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field"><label>Region</label><input id="fRegion" placeholder="us-east-1" autocapitalize="off" autocorrect="off"></div>
+    <button class="btn primary" id="btnSaveConnect">保存并连接</button>
+    <button class="btn ghost" id="btnCloseConnect">取消</button>
+  </div>
+</div>
+
+<!-- 操作菜单 -->
+<div class="sheet-wrap" id="actionSheet">
+  <div class="sheet">
+    <h2 id="asTitle">操作</h2>
+    <div class="actions" id="asActions"></div>
+    <button class="btn ghost" id="btnCloseActions">关闭</button>
+  </div>
+</div>
+
+<!-- 预览 -->
+<div class="viewer" id="viewer">
+  <div class="vbar">
+    <button class="icon-btn" id="btnCloseViewer">✕</button>
+    <div style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="vTitle"></div>
+    <button class="icon-btn" id="btnViewerShare">⤴︎</button>
+  </div>
+  <div class="vbody" id="vBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { s3, presignGet, uriEncode, amzDate } from "./s3.js";
+// ─────────────────────────────────────────────────────────────
+// 状态
+// ─────────────────────────────────────────────────────────────
+const CFG_KEY = "osca.config.v1";
+let cfg = null;
+let prefix = "";
+let entries = [];
+let sortBy = "name";
+let loading = false;
+
+const $ = id => document.getElementById(id);
+
+function toast(msg, ms = 1800) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("on"), ms);
+}
+
+function humanSize(n) {
+  if (n == null) return "";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0, v = Number(n);
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return `${v < 10 && i > 0 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+}
+
+function fullKey(name) { return prefix ? `${prefix.replace(/\/$/, "")}/${name}` : name; }
+
+// ─────────────────────────────────────────────────────────────
+// 列表
+// ─────────────────────────────────────────────────────────────
+async function loadList() {
+  if (!cfg || loading) return;
+  loading = true;
+  $("list").innerHTML = `<div class="empty"><span class="spinner"></span></div>`;
+  try {
+    const res = await s3(cfg, "GET", "", { query: [["list-type", "2"], ["delimiter", "/"], ["prefix", prefix], ["max-keys", "1000"]] });
+    const xml = new DOMParser().parseFromString(await res.text(), "application/xml");
+    const folders = [...xml.querySelectorAll("CommonPrefixes > Prefix")].map(n => ({
+      type: "dir",
+      name: n.textContent.slice(prefix.length).replace(/\/$/, ""),
+      key: n.textContent,
+    }));
+    const files = [...xml.querySelectorAll("Contents")].map(n => ({
+      type: "file",
+      name: n.querySelector("Key").textContent.slice(prefix.length),
+      key: n.querySelector("Key").textContent,
+      size: Number(n.querySelector("Size")?.textContent || 0),
+      modified: n.querySelector("LastModified")?.textContent || "",
+    })).filter(f => f.name && !f.name.endsWith("/"));
+    entries = [...folders, ...files];
+    render();
+  } catch (err) {
+    entries = [];
+    $("list").innerHTML = `<div class="empty">读取失败：${err.message}</div>`;
+  } finally {
+    loading = false;
+  }
+}
+
+function sortEntries(list) {
+  const arr = [...list];
+  arr.sort((a, b) => {
+    if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
+    if (sortBy === "size") return (b.size || 0) - (a.size || 0);
+    if (sortBy === "time") return String(b.modified).localeCompare(String(a.modified));
+    return a.name.localeCompare(b.name, "zh");
+  });
+  return arr;
+}
+
+const IMG = /\.(png|jpe?g|gif|webp|heic|bmp|svg)$/i;
+const VID = /\.(mp4|mov|m4v|webm)$/i;
+const AUD = /\.(mp3|m4a|wav|flac|aac)$/i;
+const TXT = /\.(txt|md|json|ya?ml|xml|csv|log|ini|conf|swift|js|ts|py|sh|html|css|toml)$/i;
+
+function iconFor(e) {
+  if (e.type === "dir") return "📁";
+  if (IMG.test(e.name)) return "🖼️";
+  if (VID.test(e.name)) return "🎬";
+  if (AUD.test(e.name)) return "🎵";
+  if (TXT.test(e.name)) return "📄";
+  return "📦";
+}
+
+function render() {
+  const q = ($("search").value || "").trim().toLowerCase();
+  const shown = sortEntries(entries.filter(e => !q || e.name.toLowerCase().includes(q)));
+  $("searchWrap").style.display = cfg ? "flex" : "none";
+  $("btnUpload").style.display = cfg ? "grid" : "none";
+  $("title").textContent = cfg ? (prefix ? prefix.split("/").filter(Boolean).pop() : cfg.bucket) : "OSCA Viewer";
+
+  $("crumbs").innerHTML = "";
+  if (cfg) {
+    const root = document.createElement("button");
+    root.textContent = cfg.bucket;
+    root.onclick = () => { prefix = ""; loadList(); };
+    $("crumbs").appendChild(root);
+    const parts = prefix.split("/").filter(Boolean);
+    parts.forEach((p, i) => {
+      const sep = document.createElement("span");
+      sep.textContent = "/";
+      $("crumbs").appendChild(sep);
+      const b = document.createElement("button");
+      b.textContent = p;
+      b.onclick = () => { prefix = parts.slice(0, i + 1).join("/") + "/"; loadList(); };
+      $("crumbs").appendChild(b);
+    });
+  }
+
+  if (!shown.length) {
+    $("list").innerHTML = `<div class="empty">${cfg ? (q ? "没有匹配项" : "这个目录是空的") : "先点左上角齿轮，填入连接信息"}</div>`;
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const e of shown) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="thumb">${iconFor(e)}</div>
+      <div class="meta">
+        <div class="name"></div>
+        <div class="sub">${e.type === "dir" ? "文件夹" : `${humanSize(e.size)} · ${(e.modified || "").slice(0, 10)}`}</div>
+      </div>
+      <div class="chev">${e.type === "dir" ? "›" : ""}</div>`;
+    row.querySelector(".name").textContent = e.name;
+    row.onclick = () => e.type === "dir" ? (prefix = e.key, loadList()) : preview(e);
+    row.oncontextmenu = ev => { ev.preventDefault(); openActions(e); };
+    // 长按 = 菜单
+    let timer = null;
+    row.addEventListener("touchstart", () => { timer = setTimeout(() => { timer = null; openActions(e); }, 480); }, { passive: true });
+    row.addEventListener("touchend", () => { if (timer) { clearTimeout(timer); timer = null; } });
+    row.addEventListener("touchmove", () => { if (timer) { clearTimeout(timer); timer = null; } });
+    frag.appendChild(row);
+  }
+  $("list").innerHTML = "";
+  $("list").appendChild(frag);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 操作
+// ─────────────────────────────────────────────────────────────
+function openActions(e) {
+  $("asTitle").textContent = e.name;
+  const box = $("asActions");
+  box.innerHTML = "";
+  const add = (label, cls, fn) => {
+    const b = document.createElement("button");
+    b.className = `btn ${cls}`;
+    b.textContent = label;
+    b.onclick = async () => { closeSheets(); try { await fn(); } catch (err) { toast(err.message, 2600); } };
+    box.appendChild(b);
+  };
+  if (e.type === "dir") {
+    add("打开", "primary", async () => { prefix = e.key; await loadList(); });
+    add("复制分享链接（1 小时）", "ghost", () => shareLink(e.key));
+    add("重命名", "ghost", () => renameEntry(e));
+    add("删除整个文件夹", "danger", () => deleteEntry(e));
+  } else {
+    add("打开 / 预览", "primary", () => preview(e));
+    add("下载到本机", "ghost", () => download(e));
+    add("复制分享链接（1 小时）", "ghost", () => shareLink(e.key));
+    add("重命名", "ghost", () => renameEntry(e));
+    add("删除", "danger", () => deleteEntry(e));
+  }
+  $("actionSheet").classList.add("on");
+}
+
+async function download(e) {
+  const url = await presignGet(e.key, 3600);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = e.name;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  toast("已开始下载");
+}
+
+async function preview(e) {
+  if (!(IMG.test(e.name) || VID.test(e.name) || AUD.test(e.name) || TXT.test(e.name) || /\.pdf$/i.test(e.name))) {
+    const ok = confirm("这种格式不能内嵌预览，要下载吗？");
+    if (ok) await download(e);
+    return;
+  }
+  const url = await presignGet(e.key, 3600);
+  $("vTitle").textContent = e.name;
+  const body = $("vBody");
+  body.innerHTML = "";
+  if (IMG.test(e.name)) {
+    body.innerHTML = `<img src="${url}" alt="">`;
+  } else if (VID.test(e.name)) {
+    body.innerHTML = `<video src="${url}" controls playsinline autoplay></video>`;
+  } else if (AUD.test(e.name)) {
+    body.innerHTML = `<audio src="${url}" controls autoplay style="width:90%"></audio>`;
+  } else if (/\.pdf$/i.test(e.name)) {
+    body.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:0"></iframe>`;
+  } else {
+    const res = await fetch(url);
+    const text = await res.text();
+    body.innerHTML = `<pre></pre>`;
+    body.querySelector("pre").textContent = text.slice(0, 200000);
+  }
+  $("viewer").classList.add("on");
+  $("btnViewerShare").onclick = () => shareLink(e.key, url);
+}
+
+async function presignGet(key, seconds) {
+  const { short } = amzDate();
+  const scope = `${short}/${cfg.region}/s3/aws4_request`;
+  const q = [
+    ["X-Amz-Algorithm", "AWS4-HMAC-SHA256"],
+    ["X-Amz-Credential", `${cfg.accessKey}/${scope}`],
+    ["X-Amz-Date", amzDate().full],
+    ["X-Amz-Expires", String(seconds)],
+    ["X-Amz-SignedHeaders", "host"],
+  ].map(([k, v]) => [uriEncode(k), uriEncode(v)])
+   .sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)
+   .map(([k, v]) => `${k}=${v}`).join("&");
+
+  const path = "/" + [cfg.bucket, key].filter(Boolean).join("/");
+  const host = new URL(cfg.endpoint).host;
+  const canonicalRequest = ["GET", uriEncode(path, false), q, `host:${host}\n`, "host", UNSIGNED].join("\n");
+  const stringToSign = ["AWS4-HMAC-SHA256", amzDate().full, scope, await sha256Hex(canonicalRequest)].join("\n");
+  let k = encoder.encode("AWS4" + cfg.secretKey);
+  for (const part of [short, cfg.region, "s3", "aws4_request"]) k = await hmac(k, part);
+  const sig = [...await hmac(k, stringToSign)].map(b => b.toString(16).padStart(2, "0")).join("");
+  return `${cfg.endpoint.replace(/\/+$/, "")}${uriEncode(path, false)}?${q}&X-Amz-Signature=${sig}`;
+}
+
+async function shareLink(key, existing) {
+  const url = existing || await presignGet(key, 3600);
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("分享链接已复制（1 小时有效）");
+  } catch {
+    prompt("复制这个链接（1 小时有效）：", url);
+  }
+}
+
+async function deleteEntry(e) {
+  const label = e.type === "dir" ? `删除文件夹「${e.name}」及其全部内容？` : `删除「${e.name}」？`;
+  if (!confirm(label + "\n\n这个操作不可撤销。")) return;
+  toast("正在删除…", 6000);
+  if (e.type === "file") {
+    await s3(cfg, "DELETE", e.key);
+  } else {
+    // 递归：列出前缀下所有对象，批量删
+    let token = null;
+    do {
+      const query = [["list-type", "2"], ["prefix", e.key], ["max-keys", "1000"]];
+      if (token) query.push(["continuation-token", token]);
+      const res = await s3(cfg, "GET", "", { query });
+      const xml = new DOMParser().parseFromString(await res.text(), "application/xml");
+      const keys = [...xml.querySelectorAll("Contents > Key")].map(n => n.textContent);
+      for (const k of keys) await s3(cfg, "DELETE", k);
+      token = xml.querySelector("IsTruncated")?.textContent === "true"
+        ? xml.querySelector("NextContinuationToken")?.textContent : null;
+    } while (token);
+  }
+  toast("已删除");
+  loadList();
+}
+
+async function renameEntry(e) {
+  const next = prompt("新名称：", e.name);
+  if (!next || next === e.name) return;
+  const target = fullKey(next);
+  if (e.type === "file") {
+    await s3(cfg, "PUT", target, { headers: { "x-amz-copy-source": `/${cfg.bucket}/${uriEncode(e.key, false)}` }, body: null });
+    await s3(cfg, "DELETE", e.key);
+  } else {
+    let token = null;
+    do {
+      const query = [["list-type", "2"], ["prefix", e.key], ["max-keys", "1000"]];
+      if (token) query.push(["continuation-token", token]);
+      const res = await s3(cfg, "GET", "", { query });
+      const xml = new DOMParser().parseFromString(await res.text(), "application/xml");
+      for (const node of xml.querySelectorAll("Contents")) {
+        const oldKey = node.querySelector("Key").textContent;
+        const newKey = target + "/" + oldKey.slice(e.key.length);
+        await s3(cfg, "PUT", newKey, { headers: { "x-amz-copy-source": `/${cfg.bucket}/${uriEncode(oldKey, false)}` } });
+        await s3(cfg, "DELETE", oldKey);
+      }
+      token = xml.querySelector("IsTruncated")?.textContent === "true"
+        ? xml.querySelector("NextContinuationToken")?.textContent : null;
+    } while (token);
+  }
+  toast("已重命名");
+  loadList();
+}
+
+async function uploadFiles(files) {
+  for (const f of files) {
+    const key = fullKey(f.name);
+    toast(`上传 ${f.name}（${humanSize(f.size)}）…`, 120000);
+    await s3(cfg, "PUT", key, { body: f });
+  }
+  toast(`已上传 ${files.length} 个文件`);
+  loadList();
+}
+
+// ─────────────────────────────────────────────────────────────
+// 事件绑定
+// ─────────────────────────────────────────────────────────────
+function closeSheets() {
+  $("connectSheet").classList.remove("on");
+  $("actionSheet").classList.remove("on");
+}
+
+$("btnConnect").onclick = () => {
+  $("fEndpoint").value = cfg?.endpoint || "https://fgws3-ocloud.ihep.ac.cn";
+  $("fBucket").value = cfg?.bucket || "22134-lan1081210";
+  $("fAK").value = cfg?.accessKey || "";
+  $("fSK").value = cfg?.secretKey || "";
+  $("fRegion").value = cfg?.region || "us-east-1";
+  $("connectSheet").classList.add("on");
+};
+
+$("btnSaveConnect").onclick = async () => {
+  const next = {
+    endpoint: $("fEndpoint").value.trim(),
+    bucket: $("fBucket").value.trim(),
+    accessKey: $("fAK").value.trim(),
+    secretKey: $("fSK").value.trim(),
+    region: $("fRegion").value.trim() || "us-east-1",
+  };
+  if (!next.endpoint || !next.bucket || !next.accessKey || !next.secretKey) {
+    toast("四项都要填");
+    return;
+  }
+  cfg = next;
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  prefix = "";
+  closeSheets();
+  await loadList();
+};
+
+$("btnCloseConnect").onclick = closeSheets;
+$("btnCloseActions").onclick = closeSheets;
+$("btnCloseViewer").onclick = () => { $("viewer").classList.remove("on"); $("vBody").innerHTML = ""; };
+$("btnRefresh").onclick = () => loadList();
+$("search").oninput = render;
+$("btnUpload").onclick = () => $("filePicker").click();
+$("filePicker").onchange = async ev => {
+  const files = [...ev.target.files];
+  ev.target.value = "";
+  if (files.length) { try { await uploadFiles(files); } catch (err) { toast(err.message, 2600); } }
+};
+
+// 启动
+try {
+  const saved = JSON.parse(localStorage.getItem(CFG_KEY) || "null");
+  if (saved) { cfg = saved; loadList(); }
+} catch {}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>

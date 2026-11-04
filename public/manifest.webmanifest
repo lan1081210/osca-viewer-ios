@@ -1,0 +1,14 @@
+{
+  "name": "OSCA Viewer",
+  "short_name": "OSCA",
+  "description": "浏览、上传、下载 OSCA 云存储（S3 兼容）",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
