@@ -25,3 +25,28 @@
 - macOS 版（参考实现）：`~/Projects/osca-viewer/`
 - 云存储技能：`~/.hermes/skills/osca-cloud-storage/`
 - 网盘备份：`osca:22134-lan1081210/hermes/`
+
+---
+
+## 原生 iOS 版（已暂停，等中午处理）
+
+**状态**：源码写完，卡在 Xcode 许可协议，无法编译。
+
+- 工程：`~/Projects/osca-viewer-ios-native/`（XcodeGen 描述 + SwiftUI 源码）
+- 已复用 macOS 版核心：`S3Client.swift`、`S3Signer.swift`（纯 Foundation + CryptoKit，跨平台）
+- 界面：`OSCAViewerApp.swift`（AppState + Keychain）、`ConnectView`、`BrowserView`、`PreviewView`、`ShareSheet`
+- 已实现：连接测试、目录浏览、搜索排序、多选上传（>32MB 走分片）、图片/视频/音频/文本预览、Quick Look、预签名分享、重命名（递归）、删除（递归）、新建文件夹
+
+**唯一的阻塞**：
+
+```
+xcodebuild -showsdks → You have not agreed to the Xcode license agreements
+sudo 需要密码 → 我无法代跑
+```
+
+**恢复步骤（按顺序）**：
+
+1. `sudo xcodebuild -license accept`（若先显示协议，再敲一次 `agree`）
+2. 我这边：`brew install xcodegen` → `xcodegen generate` → `xcodebuild -destination 'platform=iOS Simulator,name=iPhone 17' build`
+3. 首次可能需要 `xcodebuild -downloadPlatform iOS`（约 7 GB）
+4. 模拟器截图验证 → 免费个人签名装真机（7 天重签）
