@@ -1,5 +1,7 @@
 # OSCA Viewer for iOS（PWA）
 
+[English](README.en.md) · 中文
+
 OSCA 云存储（S3 兼容）的手机端浏览器：连接任意 S3 endpoint，浏览、上传、下载、预览、重命名、删除、分享。
 
 - **无需 App Store、无需 Xcode**：这是一个 PWA，用 Safari 打开后「添加到主屏幕」，图标和独立窗口体验与原生应用一致
